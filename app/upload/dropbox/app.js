@@ -1,9 +1,9 @@
+require('dotenv').config();
+
 const { Dropbox } = require("dropbox");
 const path = require("path");
 const fs = require("fs");
 const proc = require('node:process');
-
-proc.loadEnvFile();
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -21,8 +21,10 @@ const filepath = path.join(filepath_name);
 async function uploadFile() {
     try {
         const contents = fs.readFileSync(filepath);
+        const dropboxPath = '/' + path.basename(filepath_name);
+
         const response = await dbx.filesUpload({
-            path: '/' + path.basename(filepath_name),
+            path: dropboxPath,
             contents: contents
         });
 
