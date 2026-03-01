@@ -53,11 +53,13 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
 
 @app.get("/meta/{file_name}")
 def meta(file_name: str):
+    storage_provider = None
     return storage_provider.get_manifest(file_name)
 
 
 @app.post("/retry/{file_name}")
 def retry(file_name: str):
+    storage_provider = None
     if not chunk_uploader:
         return JSONResponse({"detail": "Cloud uploader unavailable"}, status_code=500)
     manifest = storage_provider.get_manifest(file_name)
@@ -97,6 +99,7 @@ def retry(file_name: str):
 
 @app.get("/download/{file_name}")
 def download(file_name: str):
+    storage_provider = None
     manifest = storage_provider.get_manifest(file_name)
 
     filename = manifest.get("file_name") or f"{file_name}.bin"
