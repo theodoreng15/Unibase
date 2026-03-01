@@ -46,7 +46,7 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
             "file_size": manifest.file_size,
             "total_chunks": manifest.num_chunks,
             "chunk_size": manifest.chunk_size,
-            "status": manifest.get("status"),
+            "status": getattr(manifest, "status", "complete")
         }
     )
 
@@ -115,3 +115,37 @@ def download(file_name: str):
         media_type=content_type,
         headers=headers,
     )
+
+"""
+@app.get("/files")
+async def list_all_files():
+    from app.core.store_metadata import list_files
+    try:
+        files = await list_files()
+        return JSONResponse({"files": files})
+    except Exception as e:
+        return JSONResponse({"detail": str(e)}, status_code=500)
+"""
+
+@app.delete("/files/{file_name}")
+async def delete_file(file_name: str):
+    from app.core.store_metadata import get_full_manifest, delete_chunk_metadata
+    from app.core.chunk_deleter import ChunkCloudDeleter
+    try:
+        manifest = await get_full_manifest(file_name)
+        if not manifest:
+            return JSONResponse({"detail": "File not found"}, status_code=404)
+        
+        deleter = ChunkCloudDeleter()
+        # Step 1: Delete physical chunks from cloud
+        deleter.delete_manifest_chunks(manifest=manifest)
+        
+        # Step 2: Delete logical file record from database
+        success = await delete_chunk_metadata(file_name)
+        
+        if success:
+            return JSONResponse({"detail": "File deleted successfully", "file_name": file_name})
+        else:
+            return JSONResponse({"detail": "Failed to selectively delete metadata from database"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"detail": str(e)}, status_code=500)

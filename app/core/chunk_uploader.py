@@ -47,7 +47,9 @@ class ChunkCloudUploader:
                 )
 
             client = self._client_for(source)
-            file_id = client.upload_file(chunk_path, chunk.chunk_name)
+            with open(chunk_path, "rb") as f:
+                file_id = client.upload_file(f, chunk.chunk_name)
+            # file_id = client.upload_file(chunk_path, chunk.chunk_name)
             if not file_id:
                 provider_error = getattr(client, "last_error", "") or "unknown provider error"
                 provider_error = self._redact(provider_error)

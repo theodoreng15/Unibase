@@ -38,6 +38,7 @@ class DropboxStorage():
             return str(response.id)
 
         except Exception as e:
+            self.last_error = str(e)
             print(f"Dropbox Upload Error: {e}")
 
     def delete_file(self, file_id):

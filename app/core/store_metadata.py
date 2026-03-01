@@ -1,7 +1,11 @@
 import os
 from app.core.file_format import ChunkMetadata, FileMetadata
 from pymongo import AsyncMongoClient
+from dotenv import load_dotenv
+from pathlib import Path
 
+envpath = Path('.') / '.env'
+load_dotenv(dotenv_path=envpath)
 
 _uri = os.getenv("MONGO_URI")
 client = AsyncMongoClient(_uri)
@@ -61,3 +65,56 @@ async def delete_chunk_metadata(file_name: str) -> bool:
     except Exception as e:
             raise Exception("Unable to find the document due to the following error: ", e)
 
+async def get_full_manifest(file_name: str) -> dict:
+    try:
+        query = { "_id": file_name }
+        doc = await unibase.find_one(query)
+        if not doc: 
+            return None
+            
+        # Format the document to match what ChunkCloudDeleter expects
+        manifest = {
+            "file_name": doc["_id"],
+            "file_size": doc.get("file_size"),
+            "chunk_size": doc.get("chunk_size"),
+            "chunks": []
+        }
+        
+        chunk_dict = doc.get("chunk_list", {})
+        for idx_str, chunk_data in chunk_dict.items():
+            manifest["chunks"].append({
+                "index": int(idx_str),
+                "source": chunk_data.get("db_provider"),
+                "cloud_file_id": chunk_data.get("provider_id"),
+                "name": f"{file_name}.part{idx_str}",
+                "sha256": chunk_data.get("sha256")
+            })
+            
+        return manifest
+    except Exception as e:
+        raise Exception("Unable to get manifest due to the following error: ", e)
+
+"""
+async def list_files() -> list[dict]:
+    try:
+        # Include chunk_list to extract provider information
+        cursor = unibase.find({}, {"_id": 1, "file_size": 1, "chunk_size": 1, "chunk_list": 1})
+        files = []
+        async for doc in cursor:
+            # Extract unique providers from the chunk_list dictionary
+            chunk_dict = doc.get("chunk_list", {})
+            providers = set()
+            for chunk_meta in chunk_dict.values():
+                if "db_provider" in chunk_meta:
+                    providers.add(chunk_meta["db_provider"])
+            
+            files.append({
+                "file_name": doc["_id"],
+                "file_size": doc.get("file_size", 0),
+                "chunk_size": doc.get("chunk_size", 0),
+                "providers": list(providers)
+            })
+        return files
+    except Exception as e:
+        raise Exception("Unable to list files due to the following error: ", e)
+"""

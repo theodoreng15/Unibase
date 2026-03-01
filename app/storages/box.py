@@ -40,6 +40,7 @@ class BoxStorage():
             return str(msg.entries[0].id)
 
         except Exception as e:
+            self.last_error = str(e)
             print(f"Box: Encountered error {e}")
         
     def delete_file(self, file_id):
