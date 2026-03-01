@@ -244,7 +244,7 @@ async def get_file(file_name: str):
     except Exception as e:
         return JSONResponse({"detail": str(e)}, status_code=500)
 
-@app.get("/credits/")
+@app.get("/credits")
 async def list_members():
     return {
         "the_thunderbolts": [
