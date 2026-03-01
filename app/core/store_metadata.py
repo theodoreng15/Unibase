@@ -73,10 +73,12 @@ async def get_full_manifest(file_name: str) -> dict:
             return None
             
         # Format the document to match what ChunkCloudDeleter expects
+        # This should've been FileMetadata, todo fix
         manifest = {
             "file_name": doc["_id"],
             "file_size": doc.get("file_size"),
             "chunk_size": doc.get("chunk_size"),
+            "content_type": doc.get("content_type"),
             "chunks": []
         }
         
