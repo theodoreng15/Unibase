@@ -28,21 +28,15 @@ const drive = google.drive({
 const filepath_name = process.env.FILENAME;
 const filepath = path.join(filepath_name);
 
-async function uploadFile(FILE_NAME) {
+async function deleteFile(FILE_ID) {
     try {
-        const response = await drive.files.create({
-            requestBody: {
-                name: FILE_NAME,
-                mimeType: mimeTypes.lookup(filepath_name)
-            },
-            media: {
-                mimeType: mimeTypes.lookup(filepath_name),
-                body: fs.createReadStream(filepath)
-            }
+        const response = await drive.files.delete({
+            fileId: FILE_ID,
         });
-
-        console.log(response.data);
+        console.log(response.data, response.status);
     } catch (error) {
-        console.log(error.message);
+        if (error == 204){
+            console.log(error.message, ": file deleted");
+        }
     }
 }
