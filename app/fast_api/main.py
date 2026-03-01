@@ -199,7 +199,7 @@ async def get_file(file_name: str):
         getr = ChunkCloudGetter()
 
         resulting_chunks_dict = getr.get_manifest_chunks(manifest=manifest)
-        ordered_keys = manifest.get_ordered_names()
+        ordered_keys = sorted(resulting_chunks_dict.keys())
 
         with open("combined_file.bin", "wb") as output_file:
             for blob_name in ordered_keys:
