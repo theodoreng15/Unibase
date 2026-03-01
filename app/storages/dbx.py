@@ -52,9 +52,9 @@ class DropboxStorage():
         except Exception as e:
             print(f"Dropbox Delete Error: {e}")
     
-    def get_file(self, file_path_or_id: str) -> bytes:
+    def get_file(self, file_id: str) -> bytes:
         try:
-            metadata, response = self.dbx.files_download(file_path_or_id)
+            metadata, response = self.dbx.files_download(file_id)
             
             print(f"Successfully downloaded {file_id}")
             return response.content
