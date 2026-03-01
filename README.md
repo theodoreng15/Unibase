@@ -43,12 +43,12 @@ Uploads a file to the Unibase engine. The API streams the file, fragments it int
 curl -s -X POST "https://sleekiest-unctuously-janise.ngrok-free.dev/upload" -F "file=@cat.jpg" | python3 -m json.tool
 ```
 
-### 2. Reconstruct & Fetch File (`GET /files/{file_name}`)
+### 2. Reconstruct & Download!!! a File (`GET /files/{file_name}`)
 Queries the MongoDB instance for the metadata on chunk locations, pulls the pieces back from the respective cloud providers, and reconstitutes the file on the backend server. Useful for verifying data integrity and checking retrieval speeds.
 
 **Request (cURL):**
 ```bash
-curl -X GET "https://sleekiest-unctuously-janise.ngrok-free.dev/cat.jpg" |  python3 -m json.tool
+curl -X GET "https://sleekiest-unctuously-janise.ngrok-free.dev/cat.jpg" -o cat.jpg
 ```
 
 ### 3. Delete File (`DELETE /files/{file_name}`)
