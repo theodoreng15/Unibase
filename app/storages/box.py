@@ -40,7 +40,19 @@ class BoxStorage():
             return str(msg.entries[0].id)
 
         except Exception as e:
-            self.last_error = str(e)
+            error_msg = str(e)
+            if "name already exists" in error_msg or 'item_name_in_use' in error_msg:
+                try:
+                    # Attempt to find the existing file ID by querying the folder
+                    items = self.client.folders.get_folder_items(folder_id="0").entries
+                    for item in items:
+                        if item.name == file_basename:
+                            print(f"File {file_basename} already exists at Box with ID: {item.id}")
+                            return item.id
+                except Exception as ex:
+                    self.last_error = f"Conflict recovery failed: {ex}"
+            else:
+                self.last_error = error_msg
             print(f"Box: Encountered error {e}")
         
     def delete_file(self, file_id):
