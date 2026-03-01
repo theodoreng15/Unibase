@@ -78,7 +78,6 @@ async def get_full_manifest(file_name: str) -> dict:
             "file_name": doc["_id"],
             "file_size": doc.get("file_size"),
             "chunk_size": doc.get("chunk_size"),
-            "content_type": doc.get("content_type"),
             "chunks": []
         }
         

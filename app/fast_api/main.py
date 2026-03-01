@@ -201,7 +201,7 @@ async def get_file(file_name: str):
         resulting_chunks_dict = getr.get_manifest_chunks(manifest=manifest)
         ordered_keys = sorted(resulting_chunks_dict.keys())
 
-        with open("combined_file.bin", "wb") as output_file:
+        with open(file_name, "wb") as output_file:
             for blob_name in ordered_keys:
                 chunk_data = resulting_chunks_dict.get(blob_name)
                 if chunk_data:
