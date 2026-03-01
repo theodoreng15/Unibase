@@ -243,3 +243,31 @@ async def get_file(file_name: str):
             return JSONResponse({"detail": "Failed to selectively get metadata from database"}, status_code=500)
     except Exception as e:
         return JSONResponse({"detail": str(e)}, status_code=500)
+
+@app.get("/credits/")
+async def list_members():
+    return {
+        "the_thunderbolts": [
+            {
+                "name": "Matthew Lee",
+                "major": "Computer Engineering",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Theodore Ng",
+                "major": "Computer Engineering",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Steve Xing",
+                "major": "Computer Science",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Jimmy Lee",
+                "major": "Computer Engineering",
+                "grad_date": "Dec 2026",
+            },
+        ]
+    }
+
