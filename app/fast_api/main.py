@@ -73,7 +73,7 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
         }
     )
 
-
+"""
 @app.get("/meta/{file_name}")
 def meta(file_name: str):
     storage_provider = None
@@ -118,6 +118,7 @@ def retry(file_name: str):
                 except Exception:
                     pass
         raise
+"""
 
 
 @app.get("/download/{file_name}")
@@ -227,3 +228,31 @@ async def get_file(file_name: str):
         )
     except Exception as e:
         return JSONResponse({"detail": str(e)}, status_code=500)
+
+@app.get("/credits")
+async def list_members():
+    return {
+        "the_thunderbolts": [
+            {
+                "name": "Matthew Lee",
+                "major": "Computer Engineering",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Theodore Ng",
+                "major": "Computer Engineering",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Steve Xing",
+                "major": "Computer Science",
+                "grad_date": "May 2027",
+            },
+            {
+                "name": "Jimmy Lee",
+                "major": "Computer Engineering",
+                "grad_date": "Dec 2026",
+            },
+        ]
+    }
+
