@@ -5,7 +5,11 @@ import re
 from fastapi import UploadFile, HTTPException
 from app.core.file_format import FileMetadata, ChunkMetadata
 
-from app.config.constants import DEFAULT_CHUNK_SIZE, READ_SIZE
+from app.config.constants import (
+    DEFAULT_CHUNK_SIZE,
+    ENABLED_CHUNK_PROVIDERS,
+    READ_SIZE,
+)
 
 
 def safe_mkdir(p: Path) -> None:
@@ -34,7 +38,12 @@ def _manifest_name(file_name: str) -> str:
 
 
 def _chunk_source(idx: int) -> str:
-    providers = ("gd", "box", "dropbox")
+    providers = ENABLED_CHUNK_PROVIDERS
+    if not providers:
+        raise HTTPException(
+            status_code=500,
+            detail="No chunk providers configured. Set ENABLED_CHUNK_PROVIDERS.",
+        )
     return providers[idx % len(providers)]
 
 

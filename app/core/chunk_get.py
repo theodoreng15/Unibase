@@ -35,7 +35,7 @@ class ChunkCloudGetter:
         Updates the manifest to remove cloud file IDs as they are deleted.
         """
         
-        get_chunk_dict = dict()        
+        get_chunk_dict = {}
 
         for chunk in sorted(manifest.get("chunks", []), key=lambda c: c.get("index", 0)):
             file_id = chunk.get("cloud_file_id")
@@ -53,8 +53,8 @@ class ChunkCloudGetter:
                 result = client.get_file(file_id)
                 # If the method doesn't throw an error, we assume success
                 print(f"SUCCESSFULLY got chunk {chunk['name']} from {source} (ID: {file_id})")
-                
-                get_chunk_dict[chunk['name']] = result
+
+                get_chunk_dict[int(chunk["index"])] = result
                 
                 # Update the manifest file if a save callback was provided
                 if persist_manifest:

@@ -196,8 +196,7 @@ async def delete_file(file_name: str):
 
 @app.get("/files/{file_name}")
 async def get_file(file_name: str):
-    start_time = time.time()
-    from app.core.store_metadata import get_full_manifest, get_chunk_metadata, get_total_storage_used
+    from app.core.store_metadata import get_full_manifest
     from app.core.chunk_get import ChunkCloudGetter
     try:
         manifest = await get_full_manifest(file_name)
@@ -205,41 +204,26 @@ async def get_file(file_name: str):
             return JSONResponse({"detail": "File not found"}, status_code=404)
         
         getr = ChunkCloudGetter()
-
         resulting_chunks_dict = getr.get_manifest_chunks(manifest=manifest)
-        ordered_keys = sorted(resulting_chunks_dict.keys())
 
-        with open(file_name, "wb") as output_file:
-            for blob_name in ordered_keys:
-                chunk_data = resulting_chunks_dict.get(blob_name)
+        filename = manifest.get("file_name") or file_name
+        content_type = manifest.get("content_type")
+        if not content_type:
+            guessed, _ = mimetypes.guess_type(filename)
+            content_type = guessed or DEFAULT_CONTENT_TYPE
+
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        def iter_file_bytes():
+            for idx in sorted(resulting_chunks_dict.keys()):
+                chunk_data = resulting_chunks_dict.get(idx)
                 if chunk_data:
-                    output_file.write(chunk_data)
-        
-        success = await get_chunk_metadata(file_name)
-        
-        total_used = await get_total_storage_used()
-        TOTAL_CAPACITY = 15 * 1024 * 1024 * 1024
-        percent_used = round((total_used / TOTAL_CAPACITY) * 100, 4) if TOTAL_CAPACITY else 0
-        processing_time_ms = int((time.time() - start_time) * 1000)
-        
-        distribution = {}
-        for ch in manifest.get("chunks", []):
-            dist_key = ch.get("source", "unknown")
-            distribution[dist_key] = distribution.get(dist_key, 0) + 1
-        
-        if success:
-            return JSONResponse({
-                "detail": "File get successful", 
-                "file_name": file_name,
-                "storage_distribution": distribution,
-                "metrics": {
-                    "processing_time_ms": processing_time_ms,
-                    "total_storage_used_bytes": total_used,
-                    "total_storage_capacity_bytes": TOTAL_CAPACITY,
-                    "storage_used_percentage": percent_used
-                }
-            })
-        else:
-            return JSONResponse({"detail": "Failed to selectively get metadata from database"}, status_code=500)
+                    yield chunk_data
+
+        return StreamingResponse(
+            iter_file_bytes(),
+            media_type=content_type,
+            headers=headers,
+        )
     except Exception as e:
         return JSONResponse({"detail": str(e)}, status_code=500)

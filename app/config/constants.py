@@ -1,8 +1,10 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # ---------- Storage ----------
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
 STORAGE_ROOT = (BASE_DIR / "storage").resolve()
 TEMP_STORAGE_ROOT = (BASE_DIR / "tmp_storage").resolve()
 STORAGE_PROVIDER = os.getenv("STORAGE_PROVIDER", "local")
@@ -19,6 +21,11 @@ MONGO_CHUNKS_COLLECTION = os.getenv("MONGO_CHUNKS_COLLECTION", "chunks")
 # ---------- Chunking ----------
 DEFAULT_CHUNK_SIZE = 256 * 1024     # 256 KiB
 READ_SIZE = 64 * 1024               # 64 KiB streaming read
+ENABLED_CHUNK_PROVIDERS = tuple(
+    p.strip().lower()
+    for p in os.getenv("ENABLED_CHUNK_PROVIDERS", "gd,box,dropbox").split(",")
+    if p.strip()
+)
 
 # ---------- Hashing ----------
 HASH_ALGORITHM = "sha256"

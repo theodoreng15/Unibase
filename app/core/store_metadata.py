@@ -76,6 +76,7 @@ async def get_full_manifest(file_name: str) -> dict:
         # This should've been FileMetadata, todo fix
         manifest = {
             "file_name": doc["_id"],
+            "content_type": doc.get("content_type"),
             "file_size": doc.get("file_size"),
             "chunk_size": doc.get("chunk_size"),
             "chunks": []
@@ -87,7 +88,7 @@ async def get_full_manifest(file_name: str) -> dict:
                 "index": int(idx_str),
                 "source": chunk_data.get("db_provider"),
                 "cloud_file_id": chunk_data.get("provider_id"),
-                "name": f"{file_name}.part{idx_str}",
+                "name": chunk_data.get("chunk_name", f"{file_name}.part{idx_str}"),
                 "sha256": chunk_data.get("sha256")
             })
             
