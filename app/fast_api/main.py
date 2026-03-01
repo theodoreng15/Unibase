@@ -57,6 +57,7 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
 
     return JSONResponse(
         {
+            "detail": "File uploaded successfully",
             "file_name": manifest.file_name,
             "file_size": manifest.file_size,
             "total_chunks": manifest.num_chunks,
@@ -171,10 +172,16 @@ async def delete_file(file_name: str):
         percent_used = round((total_used / TOTAL_CAPACITY) * 100, 4) if TOTAL_CAPACITY else 0
         processing_time_ms = int((time.time() - start_time) * 1000)
         
+        distribution = {}
+        for ch in manifest.get("chunks", []):
+            dist_key = ch.get("source", "unknown")
+            distribution[dist_key] = distribution.get(dist_key, 0) + 1
+        
         if success:
             return JSONResponse({
                 "detail": "File deleted successfully", 
                 "file_name": file_name,
+                "storage_distribution": distribution,
                 "metrics": {
                     "processing_time_ms": processing_time_ms,
                     "total_storage_used_bytes": total_used,
@@ -189,7 +196,8 @@ async def delete_file(file_name: str):
 
 @app.get("/files/{file_name}")
 async def get_file(file_name: str):
-    from app.core.store_metadata import get_full_manifest, get_chunk_metadata
+    start_time = time.time()
+    from app.core.store_metadata import get_full_manifest, get_chunk_metadata, get_total_storage_used
     from app.core.chunk_get import ChunkCloudGetter
     try:
         manifest = await get_full_manifest(file_name)
@@ -209,8 +217,28 @@ async def get_file(file_name: str):
         
         success = await get_chunk_metadata(file_name)
         
+        total_used = await get_total_storage_used()
+        TOTAL_CAPACITY = 15 * 1024 * 1024 * 1024
+        percent_used = round((total_used / TOTAL_CAPACITY) * 100, 4) if TOTAL_CAPACITY else 0
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        distribution = {}
+        for ch in manifest.get("chunks", []):
+            dist_key = ch.get("source", "unknown")
+            distribution[dist_key] = distribution.get(dist_key, 0) + 1
+        
         if success:
-            return JSONResponse({"detail": "File get successfully", "file_name": file_name})
+            return JSONResponse({
+                "detail": "File get successful", 
+                "file_name": file_name,
+                "storage_distribution": distribution,
+                "metrics": {
+                    "processing_time_ms": processing_time_ms,
+                    "total_storage_used_bytes": total_used,
+                    "total_storage_capacity_bytes": TOTAL_CAPACITY,
+                    "storage_used_percentage": percent_used
+                }
+            })
         else:
             return JSONResponse({"detail": "Failed to selectively get metadata from database"}, status_code=500)
     except Exception as e:
