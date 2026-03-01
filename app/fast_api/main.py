@@ -186,3 +186,32 @@ async def delete_file(file_name: str):
             return JSONResponse({"detail": "Failed to selectively delete metadata from database"}, status_code=500)
     except Exception as e:
         return JSONResponse({"detail": str(e)}, status_code=500)
+
+@app.get("/files/{file_name}")
+async def get_file(file_name: str):
+    from app.core.store_metadata import get_full_manifest, get_chunk_metadata
+    from app.core.chunk_get import ChunkCloudGetter
+    try:
+        manifest = await get_full_manifest(file_name)
+        if not manifest:
+            return JSONResponse({"detail": "File not found"}, status_code=404)
+        
+        getr = ChunkCloudGetter()
+
+        resulting_chunks_dict = getr.get_manifest_chunks(manifest=manifest)
+        ordered_keys = manifest.get_ordered_names()
+
+        with open("combined_file.bin", "wb") as output_file:
+            for blob_name in ordered_keys:
+                chunk_data = resulting_chunks_dict.get(blob_name)
+                if chunk_data:
+                    output_file.write(chunk_data)
+        
+        success = await get_chunk_metadata(file_name)
+        
+        if success:
+            return JSONResponse({"detail": "File get successfully", "file_name": file_name})
+        else:
+            return JSONResponse({"detail": "Failed to selectively get metadata from database"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"detail": str(e)}, status_code=500)
