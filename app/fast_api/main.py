@@ -73,7 +73,7 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
         }
     )
 
-
+"""
 @app.get("/meta/{file_name}")
 def meta(file_name: str):
     storage_provider = None
@@ -118,6 +118,7 @@ def retry(file_name: str):
                 except Exception:
                     pass
         raise
+"""
 
 
 @app.get("/download/{file_name}")
