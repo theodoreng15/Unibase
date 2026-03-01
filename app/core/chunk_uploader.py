@@ -3,9 +3,11 @@ import re
 
 from fastapi import HTTPException
 
-from app.storages.box import BoxStorage
-from app.storages.dbx import DropboxStorage
-from app.storages.gd import GoogleDriveStorage
+from app.storages.compat_clients import (
+    BoxCompatClient,
+    DropboxCompatClient,
+    GoogleDriveCompatClient,
+)
 
 
 class ChunkCloudUploader:
@@ -15,15 +17,15 @@ class ChunkCloudUploader:
     def _client_for(self, source: str):
         if source == "gd":
             if "gd" not in self._clients:
-                self._clients["gd"] = GoogleDriveStorage()
+                self._clients["gd"] = GoogleDriveCompatClient()
             return self._clients["gd"]
         if source == "box":
             if "box" not in self._clients:
-                self._clients["box"] = BoxStorage()
+                self._clients["box"] = BoxCompatClient()
             return self._clients["box"]
         if source == "dropbox":
             if "dropbox" not in self._clients:
-                self._clients["dropbox"] = DropboxStorage()
+                self._clients["dropbox"] = DropboxCompatClient()
             return self._clients["dropbox"]
         raise HTTPException(status_code=500, detail=f"Unsupported chunk source '{source}'")
 
@@ -57,6 +59,7 @@ class ChunkCloudUploader:
                         f"{provider_error}"
                     ),
                 )
+            print(f"SUCCESSFULLY uploaded chunk {chunk['name']} to {source}: ")
             chunk["cloud_file_id"] = str(file_id)
             if persist_manifest:
                 persist_manifest(manifest)
