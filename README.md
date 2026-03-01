@@ -61,16 +61,10 @@ curl -X DELETE "http://127.0.0.1:8000/files/cat.jpg" |  python3 -m json.tool
 
 ## 🧠 Architecture: How It Works
 
-### 1. Fragmentation & Hashing (`fragmenter.py`)
-When a file is uploaded to the FastAPI endpoint, Unibase reads it into memory in small, manageable bursts. As it reads, it mathematically slices the data into fixed-size `.bin` chunks (e.g., 4MB). During this process, a rolling SHA-256 hash is generated for both the individual chunks and the master file.
+Unibase operates on a strict separation of concerns: physical data lives in the cloud, while logical state lives in MongoDB.
 
-### 2. Parallel Cloud Uploads (`chunk_uploader.py`)
-Once a chunk hits its size limit, it is instantly sealed. A background `asyncio` task is triggered to upload that specific chunk to its assigned cloud provider (Box, Google Drive, etc.) via `httpx`. The main thread immediately goes back to chopping the next chunk, creating a highly efficient pipeline.
+Because files are mathematically sliced into dozens of chunks and scattered across different cloud providers (Box, Google Drive, Dropbox), the system needs a source of truth to put them back together. We use an asynchronous MongoDB cluster to act as this master ledger.
 
-### 3. Metadata Indexing (`store_metadata.py`)
-As cloud providers confirm the receipt of a chunk, Unibase receives a unique `provider_id`. This ID, along with the chunk's index, size, and hash, is validated through a Pydantic model and pushed to MongoDB via `$set` operations, storing the file mapping as a highly-searchable JSON document.
-
-### 4. Seamless Reconstruction
-When a user requests a file, Unibase queries MongoDB to retrieve the sorted list of cloud IDs. It then issues parallel download requests to the respective cloud providers, verifies the SHA-256 hashes of the returning data, stitches the chunks back together in perfect mathematical order, and streams the unified file back to the user.
+When a file is uploaded, Unibase creates a FileMetadata document in MongoDB using the file's name as the primary _id. As the background tasks finish uploading individual chunks to the cloud, they receive a unique provider_id from the respective cloud API. Unibase uses atomic $set operations to instantly log this ChunkMetadata—which includes the chunk's index, assigned cloud provider, cloud ID, and SHA-256 hash—into the file's master document.
 
 ---
