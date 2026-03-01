@@ -29,10 +29,6 @@ class BoxStorage():
         try:
             file_basename = os.path.basename(file_name)
             
-            self.client.uploads.preflight_file_upload_check(
-                name=file_basename, size=21474836480, parent=PreflightFileUploadCheckParent(id="0") # roughly 20GB
-            )
-            
             msg = self.client.uploads.upload_file(
                 attributes={
                     "name": file_basename, # should replace with filename in future
@@ -74,3 +70,4 @@ class BoxStorage():
         
 if __name__ == "__main__":
     b = BoxStorage()
+
