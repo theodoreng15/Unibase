@@ -2,6 +2,7 @@ from box_sdk_gen import BoxClient, AccessToken, PreflightFileUploadCheckParent, 
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+import io
 
 envpath = Path('.') / '.env'
 load_dotenv(dotenv_path=envpath)
@@ -56,8 +57,20 @@ class BoxStorage():
         except Exception as e:
             print(f"Failed to delete file {file_id}: {e}")
             return False
+    
+    def get_file(self, file_id: str) -> bytes:
+        try:
+            file_stream = io.BytesIO()
+            
+            self.client.downloads.download_file(file_id=file_id, byte_stream=file_stream)
+            
+            file_stream.seek(0)
+            print(f"Successfully downloaded {file_id}")
+            return file_stream.read()
+            
+        except Exception as e:
+            print(f"Box Download Error: {e}")
+            return None
         
 if __name__ == "__main__":
     b = BoxStorage()
-    # b.upload_file("C:\\Users\\steve\\Downloads\\Unibase\\test_files\\lab05.pdf")
-    # b.delete_file("2150167600272")

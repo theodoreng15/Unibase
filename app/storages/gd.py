@@ -2,9 +2,11 @@ import os
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseDownload
 from dotenv import load_dotenv
 import mimetypes
 from pathlib import Path
+import io
 
 envpath = Path('.') / '.env'
 load_dotenv(dotenv_path=envpath)
@@ -30,9 +32,10 @@ class GoogleDriveStorage():
 
     def upload_file(self, input_file, file_name):
         try:
-            mime_type, _ = mimetypes.guess_type(self.FILEPATH_NAME)
+            filename_base = os.path.basename(file_name)
+            mime_type, _ = mimetypes.guess_type(filename_base)
             
-            file_metadata = {'name': os.path.basename(file_name)}
+            file_metadata = {'name': filename_base}
             media = MediaIoBaseUpload(input_file, mime_type)
 
             response = self.drive_service.files().create(
@@ -58,9 +61,25 @@ class GoogleDriveStorage():
             
         except Exception as e:
             print(f"An error occurred: {e}")
+    
+    def get_file(self, file_id: str) -> bytes:
+        try:
+            request = self.drive_service.files().get_media(fileId=file_id)
+            
+            file_stream = io.BytesIO()
+            
+            downloader = MediaIoBaseDownload(file_stream, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+            
+            file_stream.seek(0)
+            return file_stream.read()
+            
+        except Exception as e:
+            print(f"Google Drive Download Error: {e}")
+            return None
 
 
 if __name__ == "__main__":
     gd = GoogleDriveStorage()
-    gd.upload_file("C:\\Users\\steve\\Downloads\\Unibase\\test_files\\lab05.pdf")
-    # gd.delete_file("12EsdFFzeqvJSrrxtUtYu3NAlBVv4-k4R")
