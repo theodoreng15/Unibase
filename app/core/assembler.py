@@ -6,19 +6,18 @@ from fastapi import HTTPException
 from app.config.constants import READ_SIZE
 
 
-def load_manifest(storage_root: Path, file_id: str) -> dict:
-    manifest_path = storage_root / file_id / "metadata.json"
+def load_manifest(storage_root: Path, file_name: str) -> dict:
+    manifest_path = storage_root / f"{file_name}\\metadata.json"
     if not manifest_path.exists():
-        raise HTTPException(status_code=404, detail="File id not found")
+        raise HTTPException(status_code=404, detail="File not found")
     return json.loads(manifest_path.read_text())
 
 
-def chunk_stream(storage_root: Path, file_id: str):
-    manifest = load_manifest(storage_root, file_id)
-    base = storage_root / file_id
+def chunk_stream(storage_root: Path, file_name: str):
+    manifest = load_manifest(storage_root, file_name)
 
     for c in sorted(manifest["chunks"], key=lambda x: x["index"]):
-        p = base / c["name"]
+        p = storage_root / c["name"]
         if not p.exists():
             raise HTTPException(status_code=500, detail=f"Missing chunk {c['name']}")
 

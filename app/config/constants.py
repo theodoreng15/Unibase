@@ -1,8 +1,17 @@
 from pathlib import Path
+import os
 
 # ---------- Storage ----------
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STORAGE_ROOT = (BASE_DIR / "storage").resolve()
+TEMP_STORAGE_ROOT = (BASE_DIR / "tmp_storage").resolve()
+STORAGE_PROVIDER = os.getenv("STORAGE_PROVIDER", "local")
+
+# ---------- MongoDB ----------
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "unibase")
+MONGO_MANIFESTS_COLLECTION = os.getenv("MONGO_MANIFESTS_COLLECTION", "manifests")
+MONGO_CHUNKS_COLLECTION = os.getenv("MONGO_CHUNKS_COLLECTION", "chunks")
 
 # ---------- Chunking ----------
 DEFAULT_CHUNK_SIZE = 256 * 1024     # 256 KiB

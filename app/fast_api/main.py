@@ -2,24 +2,19 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import StreamingResponse, JSONResponse
 import mimetypes
 
-from app.config.constants import STORAGE_ROOT, DEFAULT_CHUNK_SIZE, DEFAULT_CONTENT_TYPE
-from app.core.fragmenter import fragment_upload
-from app.core.assembler import load_manifest, chunk_stream
+from app.config.constants import DEFAULT_CHUNK_SIZE, DEFAULT_CONTENT_TYPE
+from app.core.providers import create_storage_provider
 
 app = FastAPI()
+storage_provider = create_storage_provider()
 
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_SIZE):
-    manifest = await fragment_upload(
-        storage_root=STORAGE_ROOT,
-        file=file,
-        chunk_size=chunk_size,
-    )
+    manifest = await storage_provider.save_upload(file=file, chunk_size=chunk_size)
     return JSONResponse(
         {
-            "file_id": manifest["file_id"],
-            "original_name": manifest["original_name"],
+            "file_name": manifest["file_name"],
             "file_size": manifest["file_size"],
             "total_chunks": manifest["total_chunks"],
             "chunk_size": manifest["chunk_size"],
@@ -27,16 +22,16 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
     )
 
 
-@app.get("/meta/{file_id}")
-def meta(file_id: str):
-    return load_manifest(STORAGE_ROOT, file_id)
+@app.get("/meta/{file_name}")
+def meta(file_name: str):
+    return storage_provider.get_manifest(file_name)
 
 
-@app.get("/download/{file_id}")
-def download(file_id: str):
-    manifest = load_manifest(STORAGE_ROOT, file_id)
+@app.get("/download/{file_name}")
+def download(file_name: str):
+    manifest = storage_provider.get_manifest(file_name)
 
-    filename = manifest.get("original_name") or f"{file_id}.bin"
+    filename = manifest.get("file_name") or f"{file_name}.bin"
     content_type = manifest.get("content_type")
     if not content_type:
         guessed, _ = mimetypes.guess_type(filename)
@@ -45,7 +40,7 @@ def download(file_id: str):
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
     return StreamingResponse(
-        chunk_stream(STORAGE_ROOT, file_id),
+        storage_provider.stream_chunks(file_name),
         media_type=content_type,
         headers=headers,
     )

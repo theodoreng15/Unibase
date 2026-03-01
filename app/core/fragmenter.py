@@ -1,7 +1,7 @@
 from pathlib import Path
 import hashlib
 import json
-import uuid
+import re
 from fastapi import UploadFile, HTTPException
 
 from app.config.constants import DEFAULT_CHUNK_SIZE, READ_SIZE
@@ -11,8 +11,30 @@ def safe_mkdir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
 
 
-def chunk_name(idx: int) -> str:
+def _chunk_basename(idx: int) -> str:
     return f"chunk_{idx:06d}.bin"
+
+
+def _normalize_file_name(upload_name: str | None) -> str:
+    candidate = Path(upload_name or "").name.strip()
+    if not candidate:
+        candidate = "uploaded.bin"
+    normalized = re.sub(r"[^A-Za-z0-9._-]", "_", candidate)
+    normalized = normalized.strip("._-")
+    return normalized or "uploaded.bin"
+
+
+def _chunk_name(file_name: str, idx: int) -> str:
+    return f"{file_name}\\{_chunk_basename(idx)}"
+
+
+def _manifest_name(file_name: str) -> str:
+    return f"{file_name}\\metadata.json"
+
+
+def _chunk_source(idx: int) -> str:
+    providers = ("gd", "box", "dropbox")
+    return providers[idx % len(providers)]
 
 
 async def fragment_upload(
@@ -21,16 +43,21 @@ async def fragment_upload(
     file: UploadFile,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> dict:
-    file_id = uuid.uuid4().hex
-    out_dir = storage_root / file_id
-    safe_mkdir(out_dir)
+    file_name = _normalize_file_name(file.filename)
+    safe_mkdir(storage_root)
+    manifest_path = storage_root / _manifest_name(file_name)
+    if manifest_path.exists():
+        raise HTTPException(
+            status_code=409,
+            detail=f"File '{file_name}' already exists. Duplicate uploads are not allowed.",
+        )
 
     full_hasher = hashlib.sha256()
 
     chunks_meta = []
     idx = 0
     current_size = 0
-    current_chunk_path = out_dir / chunk_name(idx)
+    current_chunk_path = storage_root / _chunk_name(file_name, idx)
     current_chunk_file = open(current_chunk_path, "wb")
     current_chunk_hasher = hashlib.sha256()
 
@@ -62,7 +89,8 @@ async def fragment_upload(
                     chunks_meta.append(
                         {
                             "index": idx,
-                            "name": current_chunk_path.name,
+                            "name": _chunk_name(file_name, idx),
+                            "source": _chunk_source(idx),
                             "size": current_size,
                             "sha256": current_chunk_hasher.hexdigest(),
                         }
@@ -70,7 +98,7 @@ async def fragment_upload(
 
                     idx += 1
                     current_size = 0
-                    current_chunk_path = out_dir / chunk_name(idx)
+                    current_chunk_path = storage_root / _chunk_name(file_name, idx)
                     current_chunk_file = open(current_chunk_path, "wb")
                     current_chunk_hasher = hashlib.sha256()
 
@@ -79,7 +107,8 @@ async def fragment_upload(
             chunks_meta.append(
                 {
                     "index": idx,
-                    "name": current_chunk_path.name,
+                    "name": _chunk_name(file_name, idx),
+                    "source": _chunk_source(idx),
                     "size": current_size,
                     "sha256": current_chunk_hasher.hexdigest(),
                 }
@@ -97,8 +126,7 @@ async def fragment_upload(
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
     manifest = {
-        "file_id": file_id,
-        "original_name": file.filename,
+        "file_name": file_name,
         "content_type": file.content_type,
         "file_size": total_bytes,
         "chunk_size": chunk_size,
@@ -107,5 +135,5 @@ async def fragment_upload(
         "chunks": chunks_meta,
     }
 
-    (out_dir / "metadata.json").write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2))
     return manifest
