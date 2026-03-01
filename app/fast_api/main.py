@@ -37,6 +37,7 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
         file_sha256=manifest.file_sha256,
         chunks=[],
     )
+    print("Chunks about to come in")
     for ch in manifest.chunks:
         await record_chunk_metadata(file_meta=file_meta, chunk_meta=ch)
 

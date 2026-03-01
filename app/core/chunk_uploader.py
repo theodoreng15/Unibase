@@ -48,7 +48,12 @@ class ChunkCloudUploader:
 
             client = self._client_for(source)
             with open(chunk_path, "rb") as f:
-                file_id = client.upload_file(f, chunk.chunk_name)
+                import os
+                safe_name = os.path.basename(chunk.chunk_name).replace("\\", "_").replace("/", "_")
+                if source == "dropbox":
+                    file_id = client.upload_file(f.read(), safe_name)
+                else:
+                    file_id = client.upload_file(f, safe_name)
             # file_id = client.upload_file(chunk_path, chunk.chunk_name)
             if not file_id:
                 provider_error = getattr(client, "last_error", "") or "unknown provider error"
