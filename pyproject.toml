@@ -1,0 +1,17 @@
+[project]
+name = "unibase"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "box-sdk-gen>=1.17.0",
+    "dropbox>=12.0.2",
+    "fastapi>=0.134.0",
+    "google-api-python-client>=2.186.0",
+    "google-auth>=2.41.1",
+    "pymongo>=4.15.3",
+    "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.22",
+    "uvicorn>=0.41.0",
+]
