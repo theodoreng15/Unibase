@@ -134,5 +134,5 @@ async def fragment_upload(
                             file_sha256=full_hasher.hexdigest(),
                             chunks=chunks_meta)
 
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest.model_dump(), indent=2))
     return manifest

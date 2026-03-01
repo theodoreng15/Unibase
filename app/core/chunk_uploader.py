@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.storages.box import BoxStorage
 from app.storages.dbx import DropboxStorage
 from app.storages.gd import GoogleDriveStorage
-from app.core.file_format import FileMetadata, ChunkMetadata
+from app.core.file_format import FileMetadata
 
 
 class ChunkCloudUploader:
@@ -43,7 +43,7 @@ class ChunkCloudUploader:
             if not chunk_path.exists():
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Missing chunk before cloud upload: {chunk['name']}",
+                    detail=f"Missing chunk before cloud upload: {chunk.chunk_name}",
                 )
 
             client = self._client_for(source)

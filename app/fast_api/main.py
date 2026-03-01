@@ -21,32 +21,31 @@ chunk_uploader = ChunkCloudUploader()
 @app.post("/upload")
 async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_SIZE):
     manifest = await fragment_upload(storage_root=STORAGE_ROOT, file=file, chunk_size=chunk_size)
-    
-    chunk_uploader()
 
-
-    file_meta = FileMetadata(
-        file_name=manifest["file_name"],
-        file_size=manifest["file_size"],
-        chunk_size=manifest["chunk_size"],
-        chunks=[],
+    # Persist cloud data for each chunk
+    manifest = chunk_uploader.upload_manifest_chunks(
+        storage_root=STORAGE_ROOT, manifest=manifest
     )
 
-    for ch in manifest.get("chunks", []):
-        chunk_meta = ChunkMetadata(
-            chunk_index=ch["index"],
-            db_provider=ch.get("source", ""),
-            provider_id=ch.get("name", ""),
-            sha256=ch.get("sha256", ""),
-        )
-        await record_chunk_metadata(file_meta=file_meta, chunk_meta=chunk_meta)
+    # Persist metadata for each chunk
+    file_meta = FileMetadata(
+        file_name=manifest.file_name,
+        content_type=manifest.content_type,
+        file_size=manifest.file_size,
+        chunk_size=manifest.chunk_size,
+        num_chunks=manifest.num_chunks,
+        file_sha256=manifest.file_sha256,
+        chunks=[],
+    )
+    for ch in manifest.chunks:
+        await record_chunk_metadata(file_meta=file_meta, chunk_meta=ch)
 
     return JSONResponse(
         {
-            "file_name": manifest["file_name"],
-            "file_size": manifest["file_size"],
-            "total_chunks": manifest["total_chunks"],
-            "chunk_size": manifest["chunk_size"],
+            "file_name": manifest.file_name,
+            "file_size": manifest.file_size,
+            "total_chunks": manifest.num_chunks,
+            "chunk_size": manifest.chunk_size,
             "status": manifest.get("status"),
         }
     )

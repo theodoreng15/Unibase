@@ -1,6 +1,4 @@
-import asyncio
 import os
-from dotenv import load_dotenv
 from app.core.file_format import ChunkMetadata, FileMetadata
 from pymongo import AsyncMongoClient
 
