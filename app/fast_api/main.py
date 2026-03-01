@@ -1,24 +1,46 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 import mimetypes
+import json
+from pathlib import Path
 
-from app.config.constants import DEFAULT_CHUNK_SIZE, DEFAULT_CONTENT_TYPE
-from app.core.providers import create_storage_provider
+from app.config.constants import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_CONTENT_TYPE,
+    STORAGE_ROOT,
+)
+from app.core.fragmenter import fragment_upload
+from app.core.store_metadata import record_chunk_metadata
+from app.core.file_format import FileMetadata, ChunkMetadata
+from app.core.chunk_uploader import ChunkCloudUploader
 
 app = FastAPI()
-storage_provider = create_storage_provider()
-chunk_uploader = None
-try:
-    from app.core.chunk_uploader import ChunkCloudUploader
-
-    chunk_uploader = ChunkCloudUploader()
-except Exception:
-    chunk_uploader = None
+chunk_uploader = ChunkCloudUploader()
 
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_SIZE):
-    manifest = await storage_provider.save_upload(file=file, chunk_size=chunk_size)
+    manifest = await fragment_upload(storage_root=STORAGE_ROOT, file=file, chunk_size=chunk_size)
+    
+    chunk_uploader()
+
+
+    file_meta = FileMetadata(
+        file_name=manifest["file_name"],
+        file_size=manifest["file_size"],
+        chunk_size=manifest["chunk_size"],
+        chunks=[],
+    )
+
+    for ch in manifest.get("chunks", []):
+        chunk_meta = ChunkMetadata(
+            chunk_index=ch["index"],
+            db_provider=ch.get("source", ""),
+            provider_id=ch.get("name", ""),
+            sha256=ch.get("sha256", ""),
+        )
+        await record_chunk_metadata(file_meta=file_meta, chunk_meta=chunk_meta)
+
     return JSONResponse(
         {
             "file_name": manifest["file_name"],

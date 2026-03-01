@@ -3,11 +3,10 @@ import re
 
 from fastapi import HTTPException
 
-from app.storages.compat_clients import (
-    BoxCompatClient,
-    DropboxCompatClient,
-    GoogleDriveCompatClient,
-)
+from app.storages.box import BoxStorage
+from app.storages.dbx import DropboxStorage
+from app.storages.gd import GoogleDriveStorage
+from app.core.file_format import FileMetadata, ChunkMetadata
 
 
 class ChunkCloudUploader:
@@ -17,15 +16,15 @@ class ChunkCloudUploader:
     def _client_for(self, source: str):
         if source == "gd":
             if "gd" not in self._clients:
-                self._clients["gd"] = GoogleDriveCompatClient()
+                self._clients["gd"] = GoogleDriveStorage()
             return self._clients["gd"]
         if source == "box":
             if "box" not in self._clients:
-                self._clients["box"] = BoxCompatClient()
+                self._clients["box"] = BoxStorage()
             return self._clients["box"]
         if source == "dropbox":
             if "dropbox" not in self._clients:
-                self._clients["dropbox"] = DropboxCompatClient()
+                self._clients["dropbox"] = DropboxStorage()
             return self._clients["dropbox"]
         raise HTTPException(status_code=500, detail=f"Unsupported chunk source '{source}'")
 
@@ -33,14 +32,14 @@ class ChunkCloudUploader:
         self,
         *,
         storage_root: Path,
-        manifest: dict,
+        manifest: FileMetadata,
         persist_manifest=None,
     ) -> dict:
-        for chunk in sorted(manifest["chunks"], key=lambda c: c["index"]):
-            if chunk.get("cloud_file_id"):
+        for chunk in sorted(manifest.chunks, key=lambda c: c.chunk_index):
+            if chunk.provider_id:
                 continue
-            source = chunk["source"]
-            chunk_path = storage_root / chunk["name"]
+            source = chunk.db_provider
+            chunk_path = storage_root / chunk.chunk_name
             if not chunk_path.exists():
                 raise HTTPException(
                     status_code=500,
@@ -48,19 +47,19 @@ class ChunkCloudUploader:
                 )
 
             client = self._client_for(source)
-            file_id = client.upload_file(chunk_path, chunk["name"])
+            file_id = client.upload_file(chunk_path, chunk.chunk_name)
             if not file_id:
                 provider_error = getattr(client, "last_error", "") or "unknown provider error"
                 provider_error = self._redact(provider_error)
                 raise HTTPException(
                     status_code=502,
                     detail=(
-                        f"Failed uploading chunk {chunk['name']} to {source}: "
+                        f"Failed uploading chunk {chunk.chunk_name} to {source}: "
                         f"{provider_error}"
                     ),
                 )
-            print(f"SUCCESSFULLY uploaded chunk {chunk['name']} to {source}: ")
-            chunk["cloud_file_id"] = str(file_id)
+            print(f"SUCCESSFULLY uploaded chunk {chunk.chunk_name} to {source}: ")
+            chunk.provider_id = str(file_id)
             if persist_manifest:
                 persist_manifest(manifest)
 
