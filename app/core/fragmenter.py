@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from fastapi import UploadFile, HTTPException
+from app.core.file_format import FileMetadata, ChunkMetadata
 
 from app.config.constants import DEFAULT_CHUNK_SIZE, READ_SIZE
 
@@ -86,15 +87,14 @@ async def fragment_upload(
 
                 if current_size == chunk_size:
                     current_chunk_file.close()
-                    chunks_meta.append(
-                        {
-                            "index": idx,
-                            "name": _chunk_name(file_name, idx),
-                            "source": _chunk_source(idx),
-                            "size": current_size,
-                            "sha256": current_chunk_hasher.hexdigest(),
-                        }
-                    )
+
+                    meta = ChunkMetadata(chunk_index=idx, 
+                                      chunk_name=_chunk_name(file_name, idx),
+                                      db_provider=_chunk_source(idx),
+                                      provider_id="", # Empty for now, still need to upload to cloud
+                                      sha256=current_chunk_hasher.hexdigest())
+                    
+                    chunks_meta.append(meta)
 
                     idx += 1
                     current_size = 0
@@ -104,15 +104,14 @@ async def fragment_upload(
 
         if current_size > 0:
             current_chunk_file.close()
-            chunks_meta.append(
-                {
-                    "index": idx,
-                    "name": _chunk_name(file_name, idx),
-                    "source": _chunk_source(idx),
-                    "size": current_size,
-                    "sha256": current_chunk_hasher.hexdigest(),
-                }
-            )
+
+            meta = ChunkMetadata(chunk_index=idx, 
+                                      chunk_name=_chunk_name(file_name, idx),
+                                      db_provider=_chunk_source(idx),
+                                      provider_id="", # Empty for now, still need to upload to cloud
+                                      sha256=current_chunk_hasher.hexdigest())
+                    
+            chunks_meta.append(meta)
         else:
             current_chunk_file.close()
             if current_chunk_path.exists() and current_chunk_path.stat().st_size == 0:
@@ -125,16 +124,15 @@ async def fragment_upload(
             pass
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
-    manifest = {
-        "file_name": file_name,
-        "content_type": file.content_type,
-        "file_size": total_bytes,
-        "chunk_size": chunk_size,
-        "total_chunks": len(chunks_meta),
-        "file_sha256": full_hasher.hexdigest(),
-        "chunks": chunks_meta,
-        "status": "chunked",
-    }
+    # definetely not the best since a) provider id is empty and 
+    # b) we're not uploading to cloud in parallel
+    manifest = FileMetadata(file_name=file_name,
+                            content_type=file.content_type,
+                            file_size=total_bytes,
+                            chunk_size=chunk_size,
+                            num_chunks=len(chunks_meta),
+                            file_sha256=full_hasher.hexdigest(),
+                            chunks=chunks_meta)
 
     manifest_path.write_text(json.dumps(manifest, indent=2))
     return manifest
