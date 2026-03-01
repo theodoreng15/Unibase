@@ -133,6 +133,7 @@ async def fragment_upload(
         "total_chunks": len(chunks_meta),
         "file_sha256": full_hasher.hexdigest(),
         "chunks": chunks_meta,
+        "status": "chunked",
     }
 
     manifest_path.write_text(json.dumps(manifest, indent=2))

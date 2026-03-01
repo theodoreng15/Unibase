@@ -7,14 +7,24 @@ import mimetypes
 from pathlib import Path
 
 envpath = Path('.') / '.env'
-load_dotenv(dotenv_path=envpath)
+load_dotenv(dotenv_path=envpath, override=True)
 
-class GoogleDriveStorage():
+
+def _env(name: str) -> str:
+    return (os.getenv(name) or "").strip().strip("'").strip('"')
+
+
+def _cloud_name(file_name: str) -> str:
+    return file_name.replace("\\", "__")
+
+
+class GoogleDriveStorage:
     def __init__(self):
-        CLIENT_ID = os.getenv("GD_CLIENT_ID")
-        CLIENT_SECRET = os.getenv("GD_CLIENT_SECRET")
-        REFRESH_TOKEN = os.getenv("GD_REFRESH_TOKEN")
+        CLIENT_ID = _env("GD_CLIENT_ID")
+        CLIENT_SECRET = _env("GD_CLIENT_SECRET")
+        REFRESH_TOKEN = _env("GD_REFRESH_TOKEN")
         TOKEN_URI = "https://oauth2.googleapis.com/token"
+        self.last_error = ""
 
         creds = Credentials(
             token=None,
@@ -25,27 +35,29 @@ class GoogleDriveStorage():
         )
 
         self.drive_service = build('drive', 'v3', credentials=creds)
-
-        self.FILEPATH_NAME = os.getenv("FILENAME")
-
-    def upload_file(self, input_file, file_name):
+    
+    def upload_file(self, input_file: Path, file_name: str):
         try:
-            mime_type, _ = mimetypes.guess_type(self.FILEPATH_NAME)
+            mime_type, _ = mimetypes.guess_type(file_name)
+            mime_type = mime_type or "application/octet-stream"
             
-            file_metadata = {'name': os.path.basename(file_name)}
-            media = MediaIoBaseUpload(input_file, mime_type)
+            file_metadata = {'name': _cloud_name(file_name)}
+            with open(input_file, "rb") as f:
+                media = MediaIoBaseUpload(f, mime_type, resumable=False)
 
-            response = self.drive_service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
+                response = self.drive_service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id'
+                ).execute()
 
             print(f"File Uploaded successfully. File {file_name} uploaded at File ID: {response.get('id')}")
             return str(response.get('id'))
 
         except Exception as e:
+            self.last_error = str(e)
             print(f"An error occured: {e}")
+            return None
 
     def delete_file(self, file_id):
         try:
@@ -62,5 +74,5 @@ class GoogleDriveStorage():
 
 if __name__ == "__main__":
     gd = GoogleDriveStorage()
-    gd.upload_file("C:\\Users\\steve\\Downloads\\Unibase\\test_files\\lab05.pdf")
+    gd.upload_file(Path("C:\\Users\\steve\\Downloads\\Unibase\\test_files\\lab05.pdf"), "lab05.pdf")
     # gd.delete_file("12EsdFFzeqvJSrrxtUtYu3NAlBVv4-k4R")
