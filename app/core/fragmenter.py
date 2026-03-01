@@ -13,7 +13,7 @@ def safe_mkdir(p: Path) -> None:
 
 
 def _chunk_basename(idx: int) -> str:
-    return f"chunk_{idx:06d}.bin"
+    return f"chunk_{idx}.bin"
 
 
 def _normalize_file_name(upload_name: str | None) -> str:
@@ -26,11 +26,11 @@ def _normalize_file_name(upload_name: str | None) -> str:
 
 
 def _chunk_name(file_name: str, idx: int) -> str:
-    return f"{file_name}\\{_chunk_basename(idx)}"
+    return f"{file_name}_{_chunk_basename(idx)}"
 
 
 def _manifest_name(file_name: str) -> str:
-    return f"{file_name}\\metadata.json"
+    return f"{file_name}_metadata.json"
 
 
 def _chunk_source(idx: int) -> str:

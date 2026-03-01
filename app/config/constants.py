@@ -17,7 +17,7 @@ MONGO_MANIFESTS_COLLECTION = os.getenv("MONGO_MANIFESTS_COLLECTION", "manifests"
 MONGO_CHUNKS_COLLECTION = os.getenv("MONGO_CHUNKS_COLLECTION", "chunks")
 
 # ---------- Chunking ----------
-DEFAULT_CHUNK_SIZE = 16 * 1024     # 256 KiB
+DEFAULT_CHUNK_SIZE = 256 * 1024     # 256 KiB
 READ_SIZE = 64 * 1024               # 64 KiB streaming read
 
 # ---------- Hashing ----------
