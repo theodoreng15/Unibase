@@ -8,7 +8,7 @@ import mimetypes
 from pathlib import Path
 import io
 
-envpath = Path('.') / '.env'
+envpath = Path('../..') / '.env'
 load_dotenv(dotenv_path=envpath)
 
 class GoogleDriveStorage():
@@ -27,8 +27,6 @@ class GoogleDriveStorage():
         )
 
         self.drive_service = build('drive', 'v3', credentials=creds)
-
-        self.FILEPATH_NAME = os.getenv("FILENAME")
 
     def upload_file(self, input_file, file_name):
         try:

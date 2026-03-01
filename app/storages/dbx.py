@@ -4,7 +4,7 @@ from dropbox.files import WriteMode
 from dotenv import load_dotenv
 from pathlib import Path
 
-envpath = Path('.') / '.env'
+envpath = Path('../..') / '.env'
 load_dotenv(dotenv_path=envpath)
 
 class DropboxStorage():

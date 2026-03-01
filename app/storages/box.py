@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import io
 
-envpath = Path('.') / '.env'
+envpath = Path('../..') / '.env'
 load_dotenv(dotenv_path=envpath)
 
 class BoxStorage():
@@ -70,4 +70,6 @@ class BoxStorage():
         
 if __name__ == "__main__":
     b = BoxStorage()
-
+    
+    with open("example_lol.txt", "r") as f:
+        b.upload_file(f, "example_lol.txt")
