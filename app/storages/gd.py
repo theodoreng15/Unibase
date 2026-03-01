@@ -1,7 +1,7 @@
 import os
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 from dotenv import load_dotenv
 import mimetypes
 from pathlib import Path
@@ -28,12 +28,12 @@ class GoogleDriveStorage():
 
         self.FILEPATH_NAME = os.getenv("FILENAME")
 
-    def upload_file(self, file_name):
+    def upload_file(self, input_file, file_name):
         try:
             mime_type, _ = mimetypes.guess_type(self.FILEPATH_NAME)
             
             file_metadata = {'name': os.path.basename(file_name)}
-            media = MediaFileUpload(self.FILEPATH_NAME, mimetype=mime_type)
+            media = MediaIoBaseUpload(input_file, mime_type)
 
             response = self.drive_service.files().create(
                 body=file_metadata,

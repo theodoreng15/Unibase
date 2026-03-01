@@ -20,16 +20,19 @@ class DropboxStorage():
             oauth2_refresh_token=self.REFRESH_TOKEN
         )
 
-    def upload_file(self, file_name):
+    def upload_file(self, input_file, file_name):
+        """
+        input_file: expects a Python File that results from open(..., "r") as f:...
+        file_name: expects a string object, that may be a path or a file basename
+        """
         try:
             dropbox_path = f"/{os.path.basename(file_name)}"
             
-            with open(self.FILEPATH_NAME, "rb") as f:
-                response = self.dbx.files_upload(
-                    f.read(), 
-                    dropbox_path, 
-                    mode=WriteMode('overwrite')
-                )
+            response = self.dbx.files_upload(
+                input_file,
+                dropbox_path, 
+                mode=WriteMode('overwrite')
+            )
                 
             print(f"File uploaded successfully. Path: {response.path_display} at file ID: {response.id}")
             return str(response.id)
@@ -37,10 +40,13 @@ class DropboxStorage():
         except Exception as e:
             print(f"Dropbox Upload Error: {e}")
 
-    def delete_file(self, file_path_or_id):
+    def delete_file(self, file_id):
+        """
+        file_id: expects a string object denoting ID of the file we wish to delete
+        """
         try:
-            response = self.dbx.files_delete_v2(file_path_or_id)
-            print(f"File {file_path_or_id} deleted successfully.")
+            response = self.dbx.files_delete_v2(file_id)
+            print(f"File {file_id} deleted successfully.")
             return response
             
         except Exception as e:
@@ -48,9 +54,5 @@ class DropboxStorage():
 
 if __name__ == "__main__":
     db = DropboxStorage()
-    
-    # To upload the file specified in your .env
     # db.upload_file("lab05.pdf")
-    
-    # To delete (Dropbox usually deletes by path)
-    db.delete_file("id:KbksDpmCpUAAAAAAAAAABw")
+    # db.delete_file("id:KbksDpmCpUAAAAAAAAAABw")
