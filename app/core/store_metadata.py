@@ -94,6 +94,20 @@ async def get_full_manifest(file_name: str) -> dict:
     except Exception as e:
         raise Exception("Unable to get manifest due to the following error: ", e)
 
+async def get_total_storage_used() -> int:
+    try:
+        pipeline = [
+            {"$group": {"_id": None, "total_size": {"$sum": "$file_size"}}}
+        ]
+        cursor = await unibase.aggregate(pipeline)
+        result = [doc async for doc in cursor]
+        if result:
+            return result[0].get("total_size", 0)
+        return 0
+    except Exception as e:
+        print(f"Failed to calculate total storage: {e}")
+        return 0
+
 """
 async def list_files() -> list[dict]:
     try:

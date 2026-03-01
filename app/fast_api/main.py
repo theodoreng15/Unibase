@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 import mimetypes
 import json
+import time
 from pathlib import Path
 
 from app.config.constants import (
@@ -20,6 +21,7 @@ chunk_uploader = ChunkCloudUploader()
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_SIZE):
+    start_time = time.time()
     manifest = await fragment_upload(storage_root=STORAGE_ROOT, file=file, chunk_size=chunk_size)
 
     # Persist cloud data for each chunk
@@ -37,9 +39,21 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
         file_sha256=manifest.file_sha256,
         chunks=[],
     )
-    print("Chunks about to come in")
     for ch in manifest.chunks:
         await record_chunk_metadata(file_meta=file_meta, chunk_meta=ch)
+
+    from app.core.store_metadata import get_total_storage_used
+    
+    total_used = await get_total_storage_used()
+    TOTAL_CAPACITY = 15 * 1024 * 1024 * 1024 # Assumed 15GB capacity across free tiers
+    percent_used = round((total_used / TOTAL_CAPACITY) * 100, 4) if TOTAL_CAPACITY else 0
+    
+    distribution = {}
+    for ch in manifest.chunks:
+        dist_key = ch.db_provider
+        distribution[dist_key] = distribution.get(dist_key, 0) + 1
+        
+    processing_time_ms = int((time.time() - start_time) * 1000)
 
     return JSONResponse(
         {
@@ -47,7 +61,14 @@ async def upload(file: UploadFile = File(...), chunk_size: int = DEFAULT_CHUNK_S
             "file_size": manifest.file_size,
             "total_chunks": manifest.num_chunks,
             "chunk_size": manifest.chunk_size,
-            "status": getattr(manifest, "status", "complete")
+            "status": getattr(manifest, "status", "complete"),
+            "storage_distribution": distribution,
+            "metrics": {
+                "processing_time_ms": processing_time_ms,
+                "total_storage_used_bytes": total_used,
+                "total_storage_capacity_bytes": TOTAL_CAPACITY,
+                "storage_used_percentage": percent_used
+            }
         }
     )
 
@@ -130,7 +151,8 @@ async def list_all_files():
 
 @app.delete("/files/{file_name}")
 async def delete_file(file_name: str):
-    from app.core.store_metadata import get_full_manifest, delete_chunk_metadata
+    start_time = time.time()
+    from app.core.store_metadata import get_full_manifest, delete_chunk_metadata, get_total_storage_used
     from app.core.chunk_deleter import ChunkCloudDeleter
     try:
         manifest = await get_full_manifest(file_name)
@@ -144,8 +166,22 @@ async def delete_file(file_name: str):
         # Step 2: Delete logical file record from database
         success = await delete_chunk_metadata(file_name)
         
+        total_used = await get_total_storage_used()
+        TOTAL_CAPACITY = 15 * 1024 * 1024 * 1024
+        percent_used = round((total_used / TOTAL_CAPACITY) * 100, 4) if TOTAL_CAPACITY else 0
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
         if success:
-            return JSONResponse({"detail": "File deleted successfully", "file_name": file_name})
+            return JSONResponse({
+                "detail": "File deleted successfully", 
+                "file_name": file_name,
+                "metrics": {
+                    "processing_time_ms": processing_time_ms,
+                    "total_storage_used_bytes": total_used,
+                    "total_storage_capacity_bytes": TOTAL_CAPACITY,
+                    "storage_used_percentage": percent_used
+                }
+            })
         else:
             return JSONResponse({"detail": "Failed to selectively delete metadata from database"}, status_code=500)
     except Exception as e:
